@@ -434,7 +434,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // Simple client-side gate. Not real security — just keeps casual visitors out.
 // Password hash (SHA-256) checked against a stored digest so the plain password
 // isn't sitting in page source.
-const PW_HASH = "672eb365c903a3b4558bebaef687a5fe9599d87f8b816558d88cc53f5ae9e577";
+const PW_HASH = "a8dc7f645f1cd7d9665e1f9f69e2aa841f0c2dbec0a18c82fe216473288e7526";
 
 async function sha256(text) {
   const enc = new TextEncoder().encode(text);
