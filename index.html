@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Regional Ops — Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.45.4/supabase.min.js"></script>
 <style>
   :root {
     --iron: #2B2E33;
@@ -36,7 +36,7 @@
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    gap: 14px;
+    gap: 18px;
   }
   #gate h1 {
     font-size: 22px;
@@ -69,25 +69,6 @@
     color: var(--danger);
     min-height: 16px;
   }
-  #gate-note {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    font-size: 12.5px;
-    color: var(--ok);
-    min-height: 16px;
-    max-width: 280px;
-    text-align: center;
-  }
-  #gate .link-btn {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    font-size: 12.5px;
-    color: var(--ink-soft);
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 2px 4px;
-  }
-  #gate .link-btn:hover { color: var(--rust); }
 
   #app { display: none; }
 
@@ -116,19 +97,8 @@
     font-size: 11px;
     color: var(--ink-soft);
     text-align: right;
-    line-height: 1.7;
+    line-height: 1.5;
   }
-  header.top .stamp button.link-btn {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    font-size: 11px;
-    color: var(--ink-soft);
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
-  }
-  header.top .stamp button.link-btn:hover { color: var(--rust); }
 
   section.block { margin-bottom: 30px; }
   .block-head {
@@ -266,6 +236,90 @@
   }
   .add-btn:hover { background: var(--rust); }
 
+  .search-row { margin-bottom: 14px; }
+  .search-row input {
+    width: 100%;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 13.5px;
+    padding: 9px 12px;
+    border: 1px solid var(--sand-line);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .search-row input::placeholder { color: var(--ink-soft); }
+  .no-results {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 10px 2px;
+  }
+
+  .date-group { margin-bottom: 4px; }
+  .date-group-head {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--rust);
+    padding: 10px 2px 4px;
+    border-bottom: 1px solid var(--sand-line);
+  }
+  .date-group-head.overdue { color: var(--danger); }
+  .date-group-head.no-date { color: var(--ink-soft); }
+  .date-group:first-child .date-group-head { padding-top: 0; }
+
+  .notes-area-wrap { position: relative; }
+  .notes-area {
+    width: 100%;
+    min-height: 140px;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 12px 46px 12px 12px;
+    border: 1px solid var(--sand-line);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--ink);
+    resize: vertical;
+  }
+  .mic-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--sand-line);
+    background: #fff;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mic-btn:hover { border-color: var(--rust); color: var(--rust); }
+  .mic-btn.recording {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+    animation: mic-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(163,56,44,0.35); }
+    50% { box-shadow: 0 0 0 8px rgba(163,56,44,0); }
+  }
+  .notes-status {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+    min-height: 14px;
+  }
+
   footer.status {
     text-align: center;
     font-family: "Helvetica Neue", Arial, sans-serif;
@@ -273,52 +327,6 @@
     color: var(--ink-soft);
     margin-top: 34px;
   }
-
-  /* Change-password overlay panel (reuses gate look) */
-  #pw-panel-backdrop {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(34,32,28,0.45);
-    align-items: center; justify-content: center;
-    z-index: 20;
-  }
-  #pw-panel {
-    background: var(--paper);
-    border: 1px solid var(--sand-line);
-    border-radius: 6px;
-    padding: 26px 28px;
-    display: flex; flex-direction: column; gap: 12px;
-    align-items: center;
-    max-width: 300px;
-  }
-  #pw-panel h2 { font-size: 18px; margin: 0; }
-  #pw-panel input {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    font-size: 14px;
-    padding: 9px 12px;
-    border: 1px solid var(--sand-line);
-    border-radius: 4px;
-    width: 220px;
-    text-align: center;
-  }
-  #pw-panel .row { display: flex; gap: 8px; }
-  #pw-panel .link-btn {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    font-size: 12px;
-    color: var(--ink-soft);
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-decoration: underline;
-  }
-  #pw-error, #pw-note {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    font-size: 12px;
-    min-height: 14px;
-    text-align: center;
-  }
-  #pw-error { color: var(--danger); }
-  #pw-note { color: var(--ok); }
 
   @media (max-width: 520px) {
     header.top { flex-direction: column; align-items: flex-start; gap: 8px; }
@@ -330,11 +338,9 @@
 
 <div id="gate">
   <h1>Regional Ops</h1>
-  <input type="password" id="gate-pw" placeholder="Password" autocomplete="current-password">
+  <input type="password" id="gate-pw" placeholder="Password" autocomplete="off">
   <button onclick="tryUnlock()">Unlock</button>
   <div id="gate-error"></div>
-  <div id="gate-note"></div>
-  <button class="link-btn" onclick="sendReset()">Forgot password?</button>
 </div>
 
 <div class="wrap" id="app">
@@ -344,13 +350,21 @@
       <h1>Regional Ops — WA Field Services</h1>
       <div class="sub">Escalations · Tasks · Decisions</div>
     </div>
-    <div class="stamp">
-      <div id="stamp"></div>
-      <button class="link-btn" onclick="openChangePassword()">Change password</button>
-      &nbsp;·&nbsp;
-      <button class="link-btn" onclick="signOut()">Sign out</button>
-    </div>
+    <div class="stamp" id="stamp"></div>
   </header>
+
+  <div class="search-row">
+    <input type="text" id="search-box" placeholder="Search tasks, escalations, decisions — by title, owner, or source..." oninput="applySearch()">
+  </div>
+
+  <section class="block">
+    <div class="block-head"><h2>Notes</h2></div>
+    <div class="notes-area-wrap">
+      <textarea id="notes-input" class="notes-area" placeholder="Jot anything down — type, or tap the mic to dictate..." oninput="scheduleNotesSave()"></textarea>
+      <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Dictate">🎤</button>
+    </div>
+    <div class="notes-status" id="notes-status"></div>
+  </section>
 
   <section class="block">
     <div class="block-head"><h2>Today's Brief</h2></div>
@@ -365,7 +379,7 @@
       <h2>Open Tasks</h2>
       <span class="count" id="tasks-count">0</span>
     </div>
-    <ul class="items" id="tasks-list"></ul>
+    <div id="tasks-list"></div>
     <div id="tasks-empty" class="empty">No open tasks. Anything you commit to, or that comes up as a follow-up, lands here.</div>
     <div class="add-row">
       <input type="text" class="grow" id="task-title" placeholder="Task">
@@ -412,79 +426,33 @@
   <footer class="status" id="save-status">—</footer>
 </div>
 
-<!-- Set / change password overlay -->
-<div id="pw-panel-backdrop">
-  <div id="pw-panel">
-    <h2 id="pw-panel-title">Set a new password</h2>
-    <input type="password" id="pw-new" placeholder="New password" autocomplete="new-password">
-    <input type="password" id="pw-confirm" placeholder="Confirm new password" autocomplete="new-password">
-    <div id="pw-error"></div>
-    <div id="pw-note"></div>
-    <div class="row">
-      <button class="add-btn" onclick="submitNewPassword()">Save password</button>
-      <button class="link-btn" onclick="closeChangePassword()">Cancel</button>
-    </div>
-  </div>
-</div>
-
 <script>
 const SUPABASE_URL = "https://cvkrnkhlwoathokbmclo.supabase.co";
 const SUPABASE_KEY = "sb_publishable__hSuXZ6apsPr8g8YlUL0cw_qAnF_xY-";
-const ACCOUNT_EMAIL = "brendanegan1992@gmail.com";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-document.getElementById('gate-pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+// Simple client-side gate. Not real security — just keeps casual visitors out.
+// Password hash (SHA-256) checked against a stored digest so the plain password
+// isn't sitting in page source.
+const PW_HASH = "672eb365c903a3b4558bebaef687a5fe9599d87f8b816558d88cc53f5ae9e577";
+
+async function sha256(text) {
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
 
 async function tryUnlock() {
   const pw = document.getElementById('gate-pw').value;
-  document.getElementById('gate-error').textContent = '';
-  const { error } = await sb.auth.signInWithPassword({ email: ACCOUNT_EMAIL, password: pw });
-  if (error) {
+  const hash = await sha256(pw);
+  if (hash === PW_HASH) {
+    sessionStorage.setItem('rops-unlocked', '1');
+    showApp();
+  } else {
     document.getElementById('gate-error').textContent = 'Wrong password.';
   }
-  // onAuthStateChange handles showing the app on success
 }
-
-async function sendReset() {
-  document.getElementById('gate-error').textContent = '';
-  const { error } = await sb.auth.resetPasswordForEmail(ACCOUNT_EMAIL, { redirectTo: window.location.origin });
-  document.getElementById('gate-note').textContent = error
-    ? 'Could not send reset email.'
-    : 'Reset link sent — check your email.';
-}
-
-async function signOut() {
-  await sb.auth.signOut();
-}
-
-// --- change / recovery password panel ---
-let recoveryMode = false;
-
-function openChangePassword() {
-  document.getElementById('pw-panel-title').textContent = 'Change your password';
-  document.getElementById('pw-new').value = '';
-  document.getElementById('pw-confirm').value = '';
-  document.getElementById('pw-error').textContent = '';
-  document.getElementById('pw-note').textContent = '';
-  document.getElementById('pw-panel-backdrop').style.display = 'flex';
-}
-function closeChangePassword() {
-  if (recoveryMode) return; // must set a password to proceed out of recovery
-  document.getElementById('pw-panel-backdrop').style.display = 'none';
-}
-async function submitNewPassword() {
-  const pw = document.getElementById('pw-new').value;
-  const confirm = document.getElementById('pw-confirm').value;
-  const errEl = document.getElementById('pw-error');
-  errEl.textContent = '';
-  if (pw.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; return; }
-  if (pw !== confirm) { errEl.textContent = "Passwords don't match."; return; }
-  const { error } = await sb.auth.updateUser({ password: pw });
-  if (error) { errEl.textContent = error.message; return; }
-  recoveryMode = false;
-  document.getElementById('pw-panel-backdrop').style.display = 'none';
-  document.getElementById('save-status').textContent = 'Password updated';
-}
+document.getElementById('gate-pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
 
 function showApp() {
   document.getElementById('gate').style.display = 'none';
@@ -492,27 +460,12 @@ function showApp() {
   setStamp();
   load();
 }
-function showGate() {
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('gate').style.display = 'flex';
-  document.getElementById('gate-pw').value = '';
+
+if (sessionStorage.getItem('rops-unlocked') === '1') {
+  showApp();
 }
 
-sb.auth.onAuthStateChange((event, session) => {
-  if (event === 'PASSWORD_RECOVERY') {
-    recoveryMode = true;
-    openChangePassword();
-    document.getElementById('pw-panel-title').textContent = 'Set a new password';
-    return;
-  }
-  if (session) {
-    showApp();
-  } else {
-    showGate();
-  }
-});
-
-let state = { brief: "", tasks: [], escalations: [], decisions: [] };
+let state = { brief: "", notes: "", tasks: [], escalations: [], decisions: [] };
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
@@ -532,6 +485,7 @@ async function load() {
       state.escalations = state.escalations || [];
       state.decisions = state.decisions || [];
       state.brief = state.brief || "";
+      state.notes = state.notes || "";
     }
   } catch (e) {
     document.getElementById('save-status').textContent = 'Could not load — starting empty';
@@ -552,6 +506,19 @@ async function save() {
   }
 }
 
+let searchQuery = '';
+
+function applySearch() {
+  searchQuery = document.getElementById('search-box').value.trim().toLowerCase();
+  render();
+}
+
+function matchesSearch(item, extraFields) {
+  if (!searchQuery) return true;
+  const fields = [item.title, item.owner, item.source, item.note, item.context, ...(extraFields || [])];
+  return fields.some(f => f && String(f).toLowerCase().includes(searchQuery));
+}
+
 function render() {
   const briefDisplay = document.getElementById('brief-display');
   const briefEmpty = document.getElementById('brief-empty');
@@ -565,25 +532,110 @@ function render() {
     briefEmpty.style.display = 'block';
   }
   briefInput.value = state.brief || "";
+  const notesInput = document.getElementById('notes-input');
+  if (document.activeElement !== notesInput) {
+    notesInput.value = state.notes || "";
+  }
 
-  renderList('tasks', state.tasks, renderTaskItem);
+  renderTasksGrouped();
   renderList('esc', state.escalations, renderEscItem);
   renderList('dec', state.decisions, renderDecItem);
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function formatDueHead(due) {
+  const d = new Date(due + 'T00:00:00');
+  const label = d.toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short'});
+  return due < todayStr() ? `Overdue · ${label}` : `Due ${label}`;
+}
+
+function renderTasksGrouped() {
+  const listEl = document.getElementById('tasks-list');
+  const emptyEl = document.getElementById('tasks-empty');
+  const countEl = document.getElementById('tasks-count');
+  const all = (state.tasks || []).filter(t => matchesSearch(t));
+  const open = all.filter(t => !t.done);
+  countEl.textContent = open.length;
+
+  if (searchQuery && all.length === 0) {
+    emptyEl.style.display = 'block';
+    emptyEl.classList.add('no-results');
+    emptyEl.textContent = 'No matches for "' + document.getElementById('search-box').value.trim() + '".';
+    listEl.innerHTML = '';
+    return;
+  }
+  emptyEl.classList.remove('no-results');
+  if (all.length === 0) {
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = 'No open tasks. Anything you commit to, or that comes up as a follow-up, lands here.';
+    listEl.innerHTML = '';
+    return;
+  }
+  if (open.length === 0) {
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = 'No open tasks. Everything\'s checked off.';
+    listEl.innerHTML = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  const dated = open.filter(t => t.due).sort((a,b) => a.due.localeCompare(b.due));
+  const undated = open.filter(t => !t.due);
+
+  const groups = [];
+  let currentDue = null;
+  dated.forEach(t => {
+    if (t.due !== currentDue) {
+      currentDue = t.due;
+      groups.push({ due: t.due, items: [] });
+    }
+    groups[groups.length - 1].items.push(t);
+  });
+
+  let html = '';
+  groups.forEach(g => {
+    const overdue = g.due < todayStr();
+    html += `<div class="date-group">
+      <div class="date-group-head ${overdue ? 'overdue' : ''}">${formatDueHead(g.due)}</div>
+      <ul class="items">${g.items.map(renderTaskItem).join('')}</ul>
+    </div>`;
+  });
+  if (undated.length) {
+    html += `<div class="date-group">
+      <div class="date-group-head no-date">No date set</div>
+      <ul class="items">${undated.map(renderTaskItem).join('')}</ul>
+    </div>`;
+  }
+  listEl.innerHTML = html;
 }
 
 function renderList(prefix, arr, renderFn) {
   const listEl = document.getElementById(prefix + '-list');
   const emptyEl = document.getElementById(prefix + '-empty');
   const countEl = document.getElementById(prefix + '-count');
-  const open = arr.filter(i => !i.done);
+  const filtered = arr.filter(i => matchesSearch(i));
+  const open = filtered.filter(i => !i.done);
   countEl.textContent = open.length;
   if (arr.length === 0) {
     emptyEl.style.display = 'block';
+    emptyEl.classList.remove('no-results');
+    listEl.innerHTML = '';
+    return;
+  }
+  if (filtered.length === 0) {
+    emptyEl.style.display = 'block';
+    emptyEl.classList.add('no-results');
+    emptyEl.textContent = 'No matches for "' + document.getElementById('search-box').value.trim() + '".';
     listEl.innerHTML = '';
     return;
   }
   emptyEl.style.display = 'none';
-  listEl.innerHTML = arr.map(renderFn).join('');
+  emptyEl.classList.remove('no-results');
+  listEl.innerHTML = filtered.map(renderFn).join('');
 }
 
 function renderTaskItem(t) {
@@ -701,6 +753,94 @@ async function removeItem(key, id) {
   render();
   await save();
 }
+
+// --- Notes: keyboard + mic ---
+let notesSaveTimer = null;
+function scheduleNotesSave() {
+  state.notes = document.getElementById('notes-input').value;
+  document.getElementById('notes-status').textContent = 'Typing…';
+  clearTimeout(notesSaveTimer);
+  notesSaveTimer = setTimeout(async () => {
+    await save();
+    document.getElementById('notes-status').textContent = 'Notes saved · ' + new Date().toLocaleTimeString();
+  }, 900);
+}
+
+let recognition = null;
+let isRecording = false;
+
+function initSpeechRecognition() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = document.getElementById('mic-btn');
+  if (!SpeechRec) {
+    micBtn.style.display = 'none';
+    return;
+  }
+  recognition = new SpeechRec();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-AU';
+
+  let baseText = '';
+
+  recognition.onstart = () => {
+    baseText = document.getElementById('notes-input').value;
+    if (baseText && !baseText.endsWith('\n') && !baseText.endsWith(' ')) baseText += ' ';
+  };
+
+  recognition.onresult = (event) => {
+    let finalTranscript = '';
+    let interimTranscript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const t = event.results[i][0].transcript;
+      if (event.results[i].isFinal) finalTranscript += t + ' ';
+      else interimTranscript += t;
+    }
+    if (finalTranscript) baseText += finalTranscript;
+    const notesInput = document.getElementById('notes-input');
+    notesInput.value = baseText + interimTranscript;
+    state.notes = notesInput.value;
+  };
+
+  recognition.onerror = (event) => {
+    document.getElementById('notes-status').textContent =
+      event.error === 'not-allowed' ? 'Mic permission denied' : 'Mic error: ' + event.error;
+    stopMic();
+  };
+
+  recognition.onend = () => {
+    if (isRecording) {
+      // Browser can stop unexpectedly on long pauses — restart if user hasn't clicked stop
+      try { recognition.start(); } catch (e) { stopMic(); }
+    }
+  };
+}
+
+function toggleMic() {
+  if (!recognition) return;
+  if (isRecording) {
+    stopMic();
+  } else {
+    isRecording = true;
+    document.getElementById('mic-btn').classList.add('recording');
+    document.getElementById('notes-status').textContent = 'Listening…';
+    try {
+      recognition.start();
+    } catch (e) {
+      isRecording = false;
+      document.getElementById('mic-btn').classList.remove('recording');
+    }
+  }
+}
+
+function stopMic() {
+  isRecording = false;
+  document.getElementById('mic-btn').classList.remove('recording');
+  if (recognition) { try { recognition.stop(); } catch (e) {} }
+  scheduleNotesSave();
+}
+
+initSpeechRecognition();
 </script>
 </body>
 </html>
