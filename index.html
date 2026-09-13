@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regional Ops — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.45.4/supabase.min.js"></script>
+<style>
+  :root {
+    --iron: #2B2E33;
+    --iron-light: #454952;
+    --rust: #B5502C;
+    --sand-line: #D4CBB5;
+    --paper: #F7F4EC;
+    --ok: #4C7A5A;
+    --warn: #C08A2E;
+    --danger: #A3382C;
+    --ink: #22201C;
+    --ink-soft: #5B564C;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Georgia", "Times New Roman", serif;
+    min-height: 100vh;
+  }
+  body { padding: 28px 20px 60px; }
+  .wrap { max-width: 920px; margin: 0 auto; }
+
+  /* Gate screen */
+  #gate {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+  }
+  #gate h1 {
+    font-size: 22px;
+    margin: 0;
+  }
+  #gate input {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    padding: 10px 14px;
+    border: 1px solid var(--sand-line);
+    border-radius: 4px;
+    width: 240px;
+    text-align: center;
+  }
+  #gate button {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    padding: 9px 22px;
+    background: var(--iron);
+    color: var(--paper);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  #gate button:hover { background: var(--rust); }
+  #gate-error {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 12.5px;
+    color: var(--danger);
+    min-height: 16px;
+  }
+  #gate-note {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 12.5px;
+    color: var(--ok);
+    min-height: 16px;
+    max-width: 280px;
+    text-align: center;
+  }
+  #gate .link-btn {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 2px 4px;
+  }
+  #gate .link-btn:hover { color: var(--rust); }
+
+  #app { display: none; }
+
+  header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 3px solid var(--iron);
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+  }
+  header.top h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  header.top .sub {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+  header.top .stamp {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-align: right;
+    line-height: 1.7;
+  }
+  header.top .stamp button.link-btn {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+  header.top .stamp button.link-btn:hover { color: var(--rust); }
+
+  section.block { margin-bottom: 30px; }
+  .block-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--sand-line);
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+  }
+  .block-head h2 { font-size: 17px; margin: 0; font-weight: 700; }
+  .block-head .count {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .empty {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 14px 2px;
+    border: 1px dashed var(--sand-line);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.4);
+  }
+
+  .brief-text {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+    background: rgba(255,255,255,0.5);
+    border-left: 3px solid var(--rust);
+    padding: 12px 16px;
+    white-space: pre-wrap;
+  }
+  .brief-edit {
+    width: 100%;
+    min-height: 70px;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 10px 12px;
+    border: 1px solid var(--sand-line);
+    border-radius: 3px;
+    background: #fff;
+    resize: vertical;
+  }
+
+  ul.items { list-style: none; margin: 0; padding: 0; }
+  li.item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 2px;
+    border-bottom: 1px solid var(--sand-line);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  li.item:last-child { border-bottom: none; }
+  li.item.done { opacity: 0.5; }
+  li.item.done .item-title { text-decoration: line-through; }
+
+  .check {
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--iron-light);
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    cursor: pointer;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .check.checked { background: var(--ok); border-color: var(--ok); }
+  .check.checked::after { content: "✓"; color: #fff; font-size: 12px; line-height: 1; }
+
+  .item-body { flex: 1; min-width: 0; }
+  .item-title { font-size: 14px; color: var(--ink); }
+  .item-meta {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+    display: flex; flex-wrap: wrap; gap: 10px;
+  }
+  .item-meta span { white-space: nowrap; }
+  .pill {
+    display: inline-block;
+    font-size: 10.5px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .pill-high { background: rgba(163,56,44,0.13); color: var(--danger); }
+  .pill-medium { background: rgba(192,138,46,0.15); color: var(--warn); }
+  .pill-low { background: rgba(76,122,90,0.13); color: var(--ok); }
+
+  .item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .icon-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  .icon-btn:hover { border-color: var(--sand-line); color: var(--rust); }
+
+  .add-row { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .add-row input, .add-row select {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid var(--sand-line);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .add-row input[type="text"].grow { flex: 1; min-width: 160px; }
+  .add-row input[type="date"] { width: 140px; }
+  .add-row select { width: 110px; }
+  .add-btn {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    padding: 7px 14px;
+    background: var(--iron);
+    color: var(--paper);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .add-btn:hover { background: var(--rust); }
+
+  footer.status {
+    text-align: center;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 34px;
+  }
+
+  /* Change-password overlay panel (reuses gate look) */
+  #pw-panel-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(34,32,28,0.45);
+    align-items: center; justify-content: center;
+    z-index: 20;
+  }
+  #pw-panel {
+    background: var(--paper);
+    border: 1px solid var(--sand-line);
+    border-radius: 6px;
+    padding: 26px 28px;
+    display: flex; flex-direction: column; gap: 12px;
+    align-items: center;
+    max-width: 300px;
+  }
+  #pw-panel h2 { font-size: 18px; margin: 0; }
+  #pw-panel input {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1px solid var(--sand-line);
+    border-radius: 4px;
+    width: 220px;
+    text-align: center;
+  }
+  #pw-panel .row { display: flex; gap: 8px; }
+  #pw-panel .link-btn {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  #pw-error, #pw-note {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    min-height: 14px;
+    text-align: center;
+  }
+  #pw-error { color: var(--danger); }
+  #pw-note { color: var(--ok); }
+
+  @media (max-width: 520px) {
+    header.top { flex-direction: column; align-items: flex-start; gap: 8px; }
+    header.top .stamp { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h1>Regional Ops</h1>
+  <input type="password" id="gate-pw" placeholder="Password" autocomplete="current-password">
+  <button onclick="tryUnlock()">Unlock</button>
+  <div id="gate-error"></div>
+  <div id="gate-note"></div>
+  <button class="link-btn" onclick="sendReset()">Forgot password?</button>
+</div>
+
+<div class="wrap" id="app">
+
+  <header class="top">
+    <div>
+      <h1>Regional Ops — WA Field Services</h1>
+      <div class="sub">Escalations · Tasks · Decisions</div>
+    </div>
+    <div class="stamp">
+      <div id="stamp"></div>
+      <button class="link-btn" onclick="openChangePassword()">Change password</button>
+      &nbsp;·&nbsp;
+      <button class="link-btn" onclick="signOut()">Sign out</button>
+    </div>
+  </header>
+
+  <section class="block">
+    <div class="block-head"><h2>Today's Brief</h2></div>
+    <div id="brief-display" class="brief-text" style="display:none;"></div>
+    <div id="brief-empty" class="empty">No brief set yet. Nothing's been loaded in — add a note below, or ask for the daily brief to populate this.</div>
+    <textarea id="brief-input" class="brief-edit" placeholder="What's on today, what's overdue, what needs your call..."></textarea>
+    <div class="add-row"><button class="add-btn" onclick="saveBrief()">Save brief</button></div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2>Open Tasks</h2>
+      <span class="count" id="tasks-count">0</span>
+    </div>
+    <ul class="items" id="tasks-list"></ul>
+    <div id="tasks-empty" class="empty">No open tasks. Anything you commit to, or that comes up as a follow-up, lands here.</div>
+    <div class="add-row">
+      <input type="text" class="grow" id="task-title" placeholder="Task">
+      <input type="text" id="task-owner" placeholder="Owner" style="width:110px;">
+      <input type="date" id="task-due">
+      <input type="text" id="task-source" placeholder="Source" style="width:120px;">
+      <button class="add-btn" onclick="addTask()">Add</button>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2>Escalations in Flight</h2>
+      <span class="count" id="esc-count">0</span>
+    </div>
+    <ul class="items" id="esc-list"></ul>
+    <div id="esc-empty" class="empty">No live escalations. Scoring happens in conversation — only the result lands here.</div>
+    <div class="add-row">
+      <input type="text" class="grow" id="esc-title" placeholder="Escalation">
+      <select id="esc-level">
+        <option value="high">High</option>
+        <option value="medium" selected>Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <input type="text" id="esc-note" placeholder="Note" style="width:160px;">
+      <button class="add-btn" onclick="addEsc()">Add</button>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2>Needs Brendan's Decision</h2>
+      <span class="count" id="dec-count">0</span>
+    </div>
+    <ul class="items" id="dec-list"></ul>
+    <div id="dec-empty" class="empty">Nothing waiting on a decision right now.</div>
+    <div class="add-row">
+      <input type="text" class="grow" id="dec-title" placeholder="Decision needed">
+      <input type="text" id="dec-context" placeholder="Context" style="width:160px;">
+      <button class="add-btn" onclick="addDec()">Add</button>
+    </div>
+  </section>
+
+  <footer class="status" id="save-status">—</footer>
+</div>
+
+<!-- Set / change password overlay -->
+<div id="pw-panel-backdrop">
+  <div id="pw-panel">
+    <h2 id="pw-panel-title">Set a new password</h2>
+    <input type="password" id="pw-new" placeholder="New password" autocomplete="new-password">
+    <input type="password" id="pw-confirm" placeholder="Confirm new password" autocomplete="new-password">
+    <div id="pw-error"></div>
+    <div id="pw-note"></div>
+    <div class="row">
+      <button class="add-btn" onclick="submitNewPassword()">Save password</button>
+      <button class="link-btn" onclick="closeChangePassword()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://cvkrnkhlwoathokbmclo.supabase.co";
+const SUPABASE_KEY = "sb_publishable__hSuXZ6apsPr8g8YlUL0cw_qAnF_xY-";
+const ACCOUNT_EMAIL = "brendanegan1992@gmail.com";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+document.getElementById('gate-pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+
+async function tryUnlock() {
+  const pw = document.getElementById('gate-pw').value;
+  document.getElementById('gate-error').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email: ACCOUNT_EMAIL, password: pw });
+  if (error) {
+    document.getElementById('gate-error').textContent = 'Wrong password.';
+  }
+  // onAuthStateChange handles showing the app on success
+}
+
+async function sendReset() {
+  document.getElementById('gate-error').textContent = '';
+  const { error } = await sb.auth.resetPasswordForEmail(ACCOUNT_EMAIL, { redirectTo: window.location.origin });
+  document.getElementById('gate-note').textContent = error
+    ? 'Could not send reset email.'
+    : 'Reset link sent — check your email.';
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+}
+
+// --- change / recovery password panel ---
+let recoveryMode = false;
+
+function openChangePassword() {
+  document.getElementById('pw-panel-title').textContent = 'Change your password';
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-confirm').value = '';
+  document.getElementById('pw-error').textContent = '';
+  document.getElementById('pw-note').textContent = '';
+  document.getElementById('pw-panel-backdrop').style.display = 'flex';
+}
+function closeChangePassword() {
+  if (recoveryMode) return; // must set a password to proceed out of recovery
+  document.getElementById('pw-panel-backdrop').style.display = 'none';
+}
+async function submitNewPassword() {
+  const pw = document.getElementById('pw-new').value;
+  const confirm = document.getElementById('pw-confirm').value;
+  const errEl = document.getElementById('pw-error');
+  errEl.textContent = '';
+  if (pw.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; return; }
+  if (pw !== confirm) { errEl.textContent = "Passwords don't match."; return; }
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if (error) { errEl.textContent = error.message; return; }
+  recoveryMode = false;
+  document.getElementById('pw-panel-backdrop').style.display = 'none';
+  document.getElementById('save-status').textContent = 'Password updated';
+}
+
+function showApp() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  setStamp();
+  load();
+}
+function showGate() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('gate').style.display = 'flex';
+  document.getElementById('gate-pw').value = '';
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    recoveryMode = true;
+    openChangePassword();
+    document.getElementById('pw-panel-title').textContent = 'Set a new password';
+    return;
+  }
+  if (session) {
+    showApp();
+  } else {
+    showGate();
+  }
+});
+
+let state = { brief: "", tasks: [], escalations: [], decisions: [] };
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function setStamp() {
+  const d = new Date();
+  document.getElementById('stamp').textContent =
+    d.toLocaleDateString(undefined, {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+}
+
+async function load() {
+  try {
+    const { data, error } = await sb.from('dashboard_state').select('data').eq('id', 'main').single();
+    if (error) throw error;
+    if (data && data.data) {
+      state = data.data;
+      state.tasks = state.tasks || [];
+      state.escalations = state.escalations || [];
+      state.decisions = state.decisions || [];
+      state.brief = state.brief || "";
+    }
+  } catch (e) {
+    document.getElementById('save-status').textContent = 'Could not load — starting empty';
+  }
+  render();
+}
+
+async function save() {
+  const statusEl = document.getElementById('save-status');
+  try {
+    const { error } = await sb.from('dashboard_state')
+      .update({ data: state, updated_at: new Date().toISOString() })
+      .eq('id', 'main');
+    if (error) throw error;
+    statusEl.textContent = 'Saved · ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    statusEl.textContent = 'Save failed';
+  }
+}
+
+function render() {
+  const briefDisplay = document.getElementById('brief-display');
+  const briefEmpty = document.getElementById('brief-empty');
+  const briefInput = document.getElementById('brief-input');
+  if (state.brief && state.brief.trim()) {
+    briefDisplay.style.display = 'block';
+    briefDisplay.textContent = state.brief;
+    briefEmpty.style.display = 'none';
+  } else {
+    briefDisplay.style.display = 'none';
+    briefEmpty.style.display = 'block';
+  }
+  briefInput.value = state.brief || "";
+
+  renderList('tasks', state.tasks, renderTaskItem);
+  renderList('esc', state.escalations, renderEscItem);
+  renderList('dec', state.decisions, renderDecItem);
+}
+
+function renderList(prefix, arr, renderFn) {
+  const listEl = document.getElementById(prefix + '-list');
+  const emptyEl = document.getElementById(prefix + '-empty');
+  const countEl = document.getElementById(prefix + '-count');
+  const open = arr.filter(i => !i.done);
+  countEl.textContent = open.length;
+  if (arr.length === 0) {
+    emptyEl.style.display = 'block';
+    listEl.innerHTML = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  listEl.innerHTML = arr.map(renderFn).join('');
+}
+
+function renderTaskItem(t) {
+  const metaParts = [];
+  if (t.owner) metaParts.push(`<span>${escapeHtml(t.owner)}</span>`);
+  if (t.due) metaParts.push(`<span>Due ${escapeHtml(t.due)}</span>`);
+  if (t.source) metaParts.push(`<span>from ${escapeHtml(t.source)}</span>`);
+  return `
+    <li class="item ${t.done ? 'done' : ''}">
+      <div class="check ${t.done ? 'checked' : ''}" onclick="toggleItem('tasks','${t.id}')"></div>
+      <div class="item-body">
+        <div class="item-title">${escapeHtml(t.title)}</div>
+        <div class="item-meta">${metaParts.join('')}</div>
+      </div>
+      <div class="item-actions">
+        <button class="icon-btn" onclick="removeItem('tasks','${t.id}')" title="Remove">✕</button>
+      </div>
+    </li>`;
+}
+
+function renderEscItem(e) {
+  return `
+    <li class="item ${e.done ? 'done' : ''}">
+      <div class="check ${e.done ? 'checked' : ''}" onclick="toggleItem('escalations','${e.id}')" title="Mark resolved"></div>
+      <div class="item-body">
+        <div class="item-title">${escapeHtml(e.title)} <span class="pill pill-${e.level}">${e.level}</span></div>
+        <div class="item-meta">${e.note ? `<span>${escapeHtml(e.note)}</span>` : ''}</div>
+      </div>
+      <div class="item-actions">
+        <button class="icon-btn" onclick="removeItem('escalations','${e.id}')" title="Remove">✕</button>
+      </div>
+    </li>`;
+}
+
+function renderDecItem(d) {
+  return `
+    <li class="item ${d.done ? 'done' : ''}">
+      <div class="check ${d.done ? 'checked' : ''}" onclick="toggleItem('decisions','${d.id}')" title="Mark decided"></div>
+      <div class="item-body">
+        <div class="item-title">${escapeHtml(d.title)}</div>
+        <div class="item-meta">${d.context ? `<span>${escapeHtml(d.context)}</span>` : ''}</div>
+      </div>
+      <div class="item-actions">
+        <button class="icon-btn" onclick="removeItem('decisions','${d.id}')" title="Remove">✕</button>
+      </div>
+    </li>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function saveBrief() {
+  state.brief = document.getElementById('brief-input').value;
+  render();
+  await save();
+}
+
+async function addTask() {
+  const title = document.getElementById('task-title').value.trim();
+  if (!title) return;
+  state.tasks.push({
+    id: uid(), title,
+    owner: document.getElementById('task-owner').value.trim(),
+    due: document.getElementById('task-due').value,
+    source: document.getElementById('task-source').value.trim(),
+    done: false
+  });
+  document.getElementById('task-title').value = '';
+  document.getElementById('task-owner').value = '';
+  document.getElementById('task-due').value = '';
+  document.getElementById('task-source').value = '';
+  render();
+  await save();
+}
+
+async function addEsc() {
+  const title = document.getElementById('esc-title').value.trim();
+  if (!title) return;
+  state.escalations.push({
+    id: uid(), title,
+    level: document.getElementById('esc-level').value,
+    note: document.getElementById('esc-note').value.trim(),
+    done: false
+  });
+  document.getElementById('esc-title').value = '';
+  document.getElementById('esc-note').value = '';
+  render();
+  await save();
+}
+
+async function addDec() {
+  const title = document.getElementById('dec-title').value.trim();
+  if (!title) return;
+  state.decisions.push({
+    id: uid(), title,
+    context: document.getElementById('dec-context').value.trim(),
+    done: false
+  });
+  document.getElementById('dec-title').value = '';
+  document.getElementById('dec-context').value = '';
+  render();
+  await save();
+}
+
+async function toggleItem(key, id) {
+  const item = state[key].find(i => i.id === id);
+  if (item) item.done = !item.done;
+  render();
+  await save();
+}
+
+async function removeItem(key, id) {
+  state[key] = state[key].filter(i => i.id !== id);
+  render();
+  await save();
+}
+</script>
+</body>
+</html>
