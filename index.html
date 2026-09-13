@@ -236,6 +236,34 @@
   }
   .add-btn:hover { background: var(--rust); }
 
+  .summary-strip {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .summary-chip {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid var(--sand-line);
+    color: var(--ink-soft);
+  }
+  .summary-chip.overdue { background: rgba(163,56,44,0.1); border-color: rgba(163,56,44,0.3); color: var(--danger); }
+  .summary-chip.week { background: rgba(192,138,46,0.1); border-color: rgba(192,138,46,0.3); color: var(--warn); }
+  .waiting-tag {
+    display: inline-block;
+    font-size: 10.5px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    background: rgba(43,46,51,0.08);
+    color: var(--iron-light);
+  }
+
   .search-row { margin-bottom: 14px; }
   .search-row input {
     width: 100%;
@@ -353,6 +381,8 @@
     <div class="stamp" id="stamp"></div>
   </header>
 
+  <div class="summary-strip" id="summary-strip"></div>
+
   <div class="search-row">
     <input type="text" id="search-box" placeholder="Search tasks, escalations, decisions — by title, owner, or source..." oninput="applySearch()">
   </div>
@@ -376,17 +406,33 @@
 
   <section class="block">
     <div class="block-head">
-      <h2>Open Tasks</h2>
-      <span class="count" id="tasks-count">0</span>
+      <h2>To Action</h2>
+      <span class="count" id="action-count">0</span>
     </div>
-    <div id="tasks-list"></div>
-    <div id="tasks-empty" class="empty">No open tasks. Anything you commit to, or that comes up as a follow-up, lands here.</div>
+    <div id="action-list"></div>
+    <div id="action-empty" class="empty">Nothing to action. Anything only you can do lands here.</div>
     <div class="add-row">
-      <input type="text" class="grow" id="task-title" placeholder="Task">
-      <input type="text" id="task-owner" placeholder="Owner" style="width:110px;">
-      <input type="date" id="task-due">
-      <input type="text" id="task-source" placeholder="Source" style="width:120px;">
-      <button class="add-btn" onclick="addTask()">Add</button>
+      <input type="text" class="grow" id="action-title" placeholder="Task">
+      <input type="text" id="action-owner" placeholder="Owner" style="width:110px;">
+      <input type="date" id="action-due">
+      <input type="text" id="action-source" placeholder="Source" style="width:120px;">
+      <button class="add-btn" onclick="addTask('action')">Add</button>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2>To Follow Up</h2>
+      <span class="count" id="followup-count">0</span>
+    </div>
+    <div id="followup-list"></div>
+    <div id="followup-empty" class="empty">Nothing to chase. Anything waiting on someone else lands here.</div>
+    <div class="add-row">
+      <input type="text" class="grow" id="followup-title" placeholder="Task">
+      <input type="text" id="followup-waiting" placeholder="Waiting on" style="width:110px;">
+      <input type="date" id="followup-due">
+      <input type="text" id="followup-source" placeholder="Source" style="width:120px;">
+      <button class="add-btn" onclick="addTask('followup')">Add</button>
     </div>
   </section>
 
@@ -482,6 +528,7 @@ async function load() {
     if (data && data.data) {
       state = data.data;
       state.tasks = state.tasks || [];
+      state.tasks.forEach(t => { if (!t.type) t.type = 'action'; });
       state.escalations = state.escalations || [];
       state.decisions = state.decisions || [];
       state.brief = state.brief || "";
@@ -515,7 +562,7 @@ function applySearch() {
 
 function matchesSearch(item, extraFields) {
   if (!searchQuery) return true;
-  const fields = [item.title, item.owner, item.source, item.note, item.context, ...(extraFields || [])];
+  const fields = [item.title, item.owner, item.source, item.note, item.context, item.waitingOn, ...(extraFields || [])];
   return fields.some(f => f && String(f).toLowerCase().includes(searchQuery));
 }
 
@@ -537,7 +584,9 @@ function render() {
     notesInput.value = state.notes || "";
   }
 
-  renderTasksGrouped();
+  renderTasksGrouped('action');
+  renderTasksGrouped('followup');
+  renderSummaryStrip();
   renderList('esc', state.escalations, renderEscItem);
   renderList('dec', state.decisions, renderDecItem);
 }
@@ -547,19 +596,52 @@ function todayStr() {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
+function weekAheadStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 function formatDueHead(due) {
   const d = new Date(due + 'T00:00:00');
   const label = d.toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short'});
   return due < todayStr() ? `Overdue · ${label}` : `Due ${label}`;
 }
 
-function renderTasksGrouped() {
-  const listEl = document.getElementById('tasks-list');
-  const emptyEl = document.getElementById('tasks-empty');
-  const countEl = document.getElementById('tasks-count');
-  const all = (state.tasks || []).filter(t => matchesSearch(t));
+function renderSummaryStrip() {
+  const stripEl = document.getElementById('summary-strip');
+  const open = (state.tasks || []).filter(t => !t.done && t.due);
+  const today = todayStr();
+  const weekAhead = weekAheadStr();
+  const overdue = open.filter(t => t.due < today);
+  const thisWeek = open.filter(t => t.due >= today && t.due <= weekAhead);
+
+  if (overdue.length === 0 && thisWeek.length === 0) {
+    stripEl.innerHTML = '';
+    return;
+  }
+  let html = '';
+  if (overdue.length) {
+    html += `<div class="summary-chip overdue">${overdue.length} overdue</div>`;
+  }
+  if (thisWeek.length) {
+    html += `<div class="summary-chip week">${thisWeek.length} due this week</div>`;
+  }
+  stripEl.innerHTML = html;
+}
+
+function renderTasksGrouped(type) {
+  const listEl = document.getElementById(type + '-list');
+  const emptyEl = document.getElementById(type + '-empty');
+  const countEl = document.getElementById(type + '-count');
+  const byType = (state.tasks || []).filter(t => (t.type || 'action') === type);
+  const all = byType.filter(t => matchesSearch(t));
   const open = all.filter(t => !t.done);
   countEl.textContent = open.length;
+
+  const emptyDefaultText = type === 'action'
+    ? 'Nothing to action. Anything only you can do lands here.'
+    : 'Nothing to chase. Anything waiting on someone else lands here.';
 
   if (searchQuery && all.length === 0) {
     emptyEl.style.display = 'block';
@@ -571,13 +653,13 @@ function renderTasksGrouped() {
   emptyEl.classList.remove('no-results');
   if (all.length === 0) {
     emptyEl.style.display = 'block';
-    emptyEl.textContent = 'No open tasks. Anything you commit to, or that comes up as a follow-up, lands here.';
+    emptyEl.textContent = emptyDefaultText;
     listEl.innerHTML = '';
     return;
   }
   if (open.length === 0) {
     emptyEl.style.display = 'block';
-    emptyEl.textContent = 'No open tasks. Everything\'s checked off.';
+    emptyEl.textContent = 'Everything\'s checked off.';
     listEl.innerHTML = '';
     return;
   }
@@ -640,7 +722,8 @@ function renderList(prefix, arr, renderFn) {
 
 function renderTaskItem(t) {
   const metaParts = [];
-  if (t.owner) metaParts.push(`<span>${escapeHtml(t.owner)}</span>`);
+  if (t.owner && t.type !== 'followup') metaParts.push(`<span>${escapeHtml(t.owner)}</span>`);
+  if (t.waitingOn) metaParts.push(`<span class="waiting-tag">Waiting on: ${escapeHtml(t.waitingOn)}</span>`);
   if (t.due) metaParts.push(`<span>Due ${escapeHtml(t.due)}</span>`);
   if (t.source) metaParts.push(`<span>from ${escapeHtml(t.source)}</span>`);
   return `
@@ -694,20 +777,30 @@ async function saveBrief() {
   await save();
 }
 
-async function addTask() {
-  const title = document.getElementById('task-title').value.trim();
+async function addTask(type) {
+  const title = document.getElementById(type + '-title').value.trim();
   if (!title) return;
-  state.tasks.push({
+  const task = {
     id: uid(), title,
-    owner: document.getElementById('task-owner').value.trim(),
-    due: document.getElementById('task-due').value,
-    source: document.getElementById('task-source').value.trim(),
-    done: false
-  });
-  document.getElementById('task-title').value = '';
-  document.getElementById('task-owner').value = '';
-  document.getElementById('task-due').value = '';
-  document.getElementById('task-source').value = '';
+    due: document.getElementById(type + '-due').value,
+    source: document.getElementById(type + '-source').value.trim(),
+    done: false,
+    type: type,
+  };
+  if (type === 'action') {
+    task.owner = document.getElementById('action-owner').value.trim();
+  } else {
+    task.waitingOn = document.getElementById('followup-waiting').value.trim();
+  }
+  state.tasks.push(task);
+  document.getElementById(type + '-title').value = '';
+  document.getElementById(type + '-due').value = '';
+  document.getElementById(type + '-source').value = '';
+  if (type === 'action') {
+    document.getElementById('action-owner').value = '';
+  } else {
+    document.getElementById('followup-waiting').value = '';
+  }
   render();
   await save();
 }
